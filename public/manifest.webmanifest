@@ -1,0 +1,12 @@
+{
+  "name": "8.8元到账之后｜校园反诈互动体验",
+  "short_name": "8.8元之后",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f8f4f9",
+  "theme_color": "#4b1d73",
+  "description": "校园刷单返利诈骗互动短剧",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

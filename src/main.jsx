@@ -1,0 +1,27 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App.jsx';
+import './styles.css';
+
+createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);
+
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+      .then((registration) => registration.update().then(() => navigator.serviceWorker.ready))
+      .then(() => {
+        if (navigator.serviceWorker.controller) {
+          document.documentElement.dataset.offlineReady = 'true';
+          return;
+        }
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          document.documentElement.dataset.offlineReady = 'true';
+        }, { once: true });
+      })
+      .catch(() => { document.documentElement.dataset.offlineReady = 'false'; });
+  });
+}
