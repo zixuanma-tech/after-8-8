@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
-  calculateScore,
   ENDINGS,
   INITIAL_METRICS,
-  resultLevel,
+  OPENING_BAITS,
+  QUICK_QUESTIONS,
   RISK_NODES,
+  resolveProfile,
   scoreTransfer,
   TRANSFER_QUESTIONS,
 } from './story.js';
@@ -22,17 +23,6 @@ const CHARACTER = {
     motionShots: ['./assets/video/male-shot-01.mp4', './assets/video/male-shot-02.mp4', './assets/video/male-shot-03.mp4', './assets/video/male-shot-04.mp4', './assets/video/male-shot-05.mp4', './assets/video/male-shot-06.mp4', './assets/video/male-shot-07.mp4', './assets/video/male-shot-08.mp4'],
   },
 };
-
-const SCAM_BUBBLES = [
-  { id: 'part-time', label: '刷单返利', clue: '先返小钱，再诱导连续垫资', icon: '单', tone: 'violet' },
-  { id: 'refund', label: '客服退款', clue: '以理赔为名索要验证码或保证金', icon: '退', tone: 'blue' },
-  { id: 'ticket', label: '门票私下交易', clue: '诱导脱离正规平台直接转账', icon: '票', tone: 'amber' },
-  { id: 'ai-face', label: 'AI换脸换声', clue: '熟悉的脸和声音也必须二次核验', icon: 'AI', tone: 'pink' },
-  { id: 'game', label: '游戏账号交易', clue: '伪造担保平台和账户冻结页面', icon: '游', tone: 'cyan' },
-  { id: 'internship', label: '虚假实习内推', clue: '借名企或学长背书收取培训费', icon: '职', tone: 'violet' },
-  { id: 'screen', label: '屏幕共享', clue: '共享画面会暴露余额、操作和验证码', icon: '屏', tone: 'red' },
-  { id: 'grant', label: '助学金与校园贷', clue: '冒充学校或金融机构制造紧迫感', icon: '学', tone: 'green' },
-];
 
 const OFFICIAL_CASES = [
   {
@@ -65,8 +55,8 @@ const OFFICIAL_CASES = [
   },
 ];
 
-const DARK_MUSIC_SCREENS = new Set(['group', 'deposit', 'wallet', 'frozen', 'share', 'ending']);
-const FLOW = ['prologue', 'cover', 'select', 'classmate', 'feed', 'task', 'reward', 'proof', 'referral', 'group', 'deposit', 'wallet', 'frozen', 'share', 'ending', 'replay', 'transfer', 'cases', 'result'];
+const DARK_MUSIC_SCREENS = new Set(['group', 'deposit', 'wallet', 'frozen', 'share', 'ending', 'result']);
+const FLOW = ['prologue', 'cover', 'select', 'classmate', 'feed', 'task', 'reward', 'proof', 'referral', 'group', 'deposit', 'wallet', 'frozen', 'share', 'ending', 'quick', 'result', 'replay', 'transfer', 'cases'];
 
 function readSession() {
   try {
@@ -87,6 +77,10 @@ function App() {
   const [history, setHistory] = useState(() => Array.isArray(restoredSession?.history) ? restoredSession.history : []);
   const [answers, setAnswers] = useState(() => restoredSession?.answers ?? {});
   const [questionIndex, setQuestionIndex] = useState(() => Number(restoredSession?.questionIndex) || 0);
+  const [quickAnswers, setQuickAnswers] = useState(() => restoredSession?.quickAnswers ?? {});
+  const [quickIndex, setQuickIndex] = useState(() => Number(restoredSession?.quickIndex) || 0);
+  const [quickChoice, setQuickChoice] = useState(null);
+  const [nickname, setNickname] = useState(() => typeof restoredSession?.nickname === 'string' ? restoredSession.nickname : '');
   const [answerFeedback, setAnswerFeedback] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
   const [showEvidence, setShowEvidence] = useState(false);
@@ -103,18 +97,17 @@ function App() {
 
   const actor = CHARACTER[gender];
   const transferScore = useMemo(() => scoreTransfer(answers), [answers]);
-  const finalScore = useMemo(() => calculateScore(ending, transferScore), [ending, transferScore]);
-  const [levelName, levelCopy] = resultLevel(finalScore);
+  const profile = useMemo(() => resolveProfile({ history, ending, invested, metrics, quickAnswers, gender, nickname }), [history, ending, invested, metrics, quickAnswers, gender, nickname]);
 
   const progress = Math.max(2, ((FLOW.indexOf(screen) + 1) / FLOW.length) * 100);
 
   useEffect(() => {
     try {
-      sessionStorage.setItem('after-8-8-session', JSON.stringify({ screen, gender, ending, invested, metrics, history, answers, questionIndex }));
+      sessionStorage.setItem('after-8-8-session', JSON.stringify({ screen, gender, ending, invested, metrics, history, answers, questionIndex, quickAnswers, quickIndex, nickname }));
     } catch {
       // Local-file and privacy modes may disable storage; the H5 still works without restoration.
     }
-  }, [screen, gender, ending, invested, metrics, history, answers, questionIndex]);
+  }, [screen, gender, ending, invested, metrics, history, answers, questionIndex, quickAnswers, quickIndex, nickname]);
 
   function tone(kind = 'tap') {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -204,6 +197,10 @@ function App() {
     setHistory([]);
     setAnswers({});
     setQuestionIndex(0);
+    setQuickAnswers({});
+    setQuickIndex(0);
+    setQuickChoice(null);
+    setNickname('');
     setAnswerFeedback(null);
     setShowProfile(false);
     setShowEvidence(false);
@@ -233,6 +230,25 @@ function App() {
     }
   }
 
+  function answerQuick(optionIndex) {
+    if (quickChoice !== null) return;
+    const question = QUICK_QUESTIONS[quickIndex];
+    setQuickAnswers((current) => ({ ...current, [question.id]: optionIndex }));
+    setQuickChoice(optionIndex);
+    tone(question.options[optionIndex].safe ? 'reward' : 'tap');
+    vibrate(16);
+  }
+
+  function nextQuick() {
+    if (quickChoice === null) return;
+    if (quickIndex < QUICK_QUESTIONS.length - 1) {
+      setQuickIndex((index) => index + 1);
+      setQuickChoice(null);
+      return;
+    }
+    go('result', '完成钱包精神状态快问');
+  }
+
   function buildResultCard() {
     const canvas = document.createElement('canvas');
     canvas.width = 1080;
@@ -260,27 +276,26 @@ function App() {
     ctx.fillStyle = '#ddc9eb';
     ctx.font = '500 34px system-ui, sans-serif';
     ctx.fillText('第一笔返款不是证明，可能只是诱饵。', 90, 335);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '900 260px system-ui, sans-serif';
-    ctx.fillText(String(finalScore), 80, 690);
-    ctx.font = '700 42px system-ui, sans-serif';
-    ctx.fillText('/ 100 反诈识别力', 470, 675);
     ctx.fillStyle = '#f3dd65';
-    ctx.font = '800 64px system-ui, sans-serif';
-    ctx.fillText(levelName, 90, 820);
+    ctx.font = '900 118px system-ui, sans-serif';
+    ctx.fillText(profile.title, 90, 630);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '500 34px system-ui, sans-serif';
-    wrapCanvasText(ctx, levelCopy, 90, 890, 900, 54);
+    ctx.font = '800 46px system-ui, sans-serif';
+    wrapCanvasText(ctx, profile.line, 90, 735, 900, 62);
+    ctx.fillStyle = '#ddc9eb';
+    ctx.font = '600 31px system-ui, sans-serif';
+    ctx.fillText(`${profile.wake.label} · ${profile.wake.title}`, 90, 885);
     ctx.fillStyle = 'rgba(255,255,255,.12)';
     roundRect(ctx, 70, 1030, 940, 330, 42);
     ctx.fill();
     ctx.fillStyle = '#ffffff';
     ctx.font = '700 38px system-ui, sans-serif';
-    ctx.fillText('我会先做这三步', 110, 1105);
+    ctx.fillText('骗子评语', 110, 1105);
     ctx.font = '500 32px system-ui, sans-serif';
-    ctx.fillText('01  不因小额返款放下警惕', 110, 1180);
-    ctx.fillText('02  不向陌生任务垫资转账', 110, 1245);
-    ctx.fillText('03  不共享屏幕、验证码和支付页面', 110, 1310);
+    wrapCanvasText(ctx, profile.note, 110, 1180, 820, 46);
+    ctx.fillStyle = '#f3dd65';
+    ctx.font = '700 30px system-ui, sans-serif';
+    wrapCanvasText(ctx, profile.defense, 110, 1300, 820, 46);
     ctx.fillStyle = '#ddc9eb';
     ctx.font = '500 26px system-ui, sans-serif';
     ctx.fillText('来源可核验 · 官方案例复盘', 90, 1500);
@@ -295,10 +310,10 @@ function App() {
     const dataUrl = buildResultCard();
     try {
       const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], '8.8元到账之后-反诈识别力卡片.png', { type: 'image/png' });
+      const file = new File([blob], '8.8元到账之后-骗子外号卡片.png', { type: 'image/png' });
       const shareData = {
         title: '《8.8元到账之后》',
-        text: `我的反诈识别力是 ${finalScore} 分。第一笔返款不是证明，可能只是诱饵。`,
+        text: `${profile.shareLine} 第一笔返款不是证明，可能只是诱饵。`,
         files: [file],
       };
       if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
@@ -330,7 +345,7 @@ function App() {
 
       <AnimatePresence mode="wait">
         <motion.section key={screen} className={`screen screen-${screen}`} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}>
-          {screen === 'prologue' && <ScamPrelude bubbles={SCAM_BUBBLES} onPop={() => { tone('bubble'); fadeMusic('prologue'); }} onNext={() => go('cover')} />}
+          {screen === 'prologue' && <ScamPrelude bubbles={OPENING_BAITS} onPop={() => { tone('bubble'); fadeMusic('prologue'); }} onNext={(bait) => go('cover', `开场先点开：${bait.message}`)} />}
           {screen === 'cover' && <Cover onStart={() => go('select')} />}
           {screen === 'select' && <CharacterSelect gender={gender} setGender={setGender} onNext={() => go('classmate', `选择${actor.name}进入剧情`)} />}
           {screen === 'classmate' && <ClassmateIntro actor={actor} phase={classmatePhase} setPhase={setClassmatePhase} onOpen={() => go('feed', '因为熟人背书点开兼职链接', { bait: 1 })} onVerify={() => finish('S', '没有把同学背书当作官方证明', { verify: 3, stop: 2 })} />}
@@ -344,11 +359,12 @@ function App() {
           {screen === 'wallet' && <FakeWallet actor={actor} phase={walletPhase} setPhase={setWalletPhase} onWithdraw={() => go('frozen', '尝试把平台余额提现后出现账户冻结', { pressure: 5 }, 'danger')} onStop={() => finish('B', '发现平台数字没有进入银行卡后立即止损', { verify: 4, stop: 5 })} />}
           {screen === 'frozen' && <Frozen actor={actor} onPay={() => { setInvested(1397); finish('C', '继续支付998元解冻金', { pressure: 5, privacy: 1 }); }} onRefund={() => go('share', '要求退款后被引导共享屏幕', { pressure: 5 })} onStop={() => finish('B', '损失399元后停止转账并求助', { stop: 4, verify: 2 })} />}
           {screen === 'share' && <Share actor={actor} onShare={() => finish('C', '开启屏幕共享暴露账户操作', { privacy: 5 })} onSingle={() => finish('C', '尝试只展示支付页，仍暴露敏感操作', { privacy: 4 })} onRefuse={() => finish('B', '拒绝屏幕共享并保留证据', { privacy: 1, stop: 5 })} />}
-          {screen === 'ending' && <Ending actor={actor} rank={ending} invested={invested} history={history} onReplay={() => go('replay')} />}
+          {screen === 'ending' && <Ending actor={actor} rank={ending} invested={invested} history={history} onReplay={() => go('quick', '进入钱包精神状态快问')} />}
+          {screen === 'quick' && <QuickTest index={quickIndex} question={QUICK_QUESTIONS[quickIndex]} selected={quickChoice} nickname={nickname} setNickname={setNickname} onAnswer={answerQuick} onNext={nextQuick} />}
+          {screen === 'result' && <Result cardRef={cardRef} profile={profile} ending={ending} transferScore={transferScore} onShare={shareCard} onDownload={downloadCard} onRestart={restart} onReplay={() => go('replay')} onTransfer={() => { setQuestionIndex(0); setAnswerFeedback(null); go('transfer'); }} onCases={() => go('cases')} cardPreview={cardPreview} onClosePreview={() => setCardPreview(null)} />}
           {screen === 'replay' && <Replay history={history} onNext={() => go('transfer')} />}
           {screen === 'transfer' && <TransferTest index={questionIndex} feedback={answerFeedback} onAnswer={answerTransfer} onNext={nextTransfer} />}
           {screen === 'cases' && <Cases showEvidence={showEvidence} setShowEvidence={setShowEvidence} onNext={() => go('result')} />}
-          {screen === 'result' && <Result cardRef={cardRef} score={finalScore} levelName={levelName} levelCopy={levelCopy} ending={ending} transferScore={transferScore} onShare={shareCard} onDownload={downloadCard} onRestart={restart} cardPreview={cardPreview} onClosePreview={() => setCardPreview(null)} />}
         </motion.section>
       </AnimatePresence>
 
@@ -357,72 +373,26 @@ function App() {
 }
 
 function ScamPrelude({ bubbles, onPop, onNext }) {
-  const [popped, setPopped] = useState([]);
-  const [lastPopped, setLastPopped] = useState(null);
-  const [elapsed, setElapsed] = useState(0);
-  const startedAt = useRef(null);
-  const complete = popped.length === bubbles.length;
-
-  useEffect(() => {
-    if (!startedAt.current || complete) return undefined;
-    const timer = window.setInterval(() => setElapsed((Date.now() - startedAt.current) / 1000), 100);
-    return () => window.clearInterval(timer);
-  }, [popped.length, complete]);
-
-  function popBubble(bubble) {
-    if (popped.includes(bubble.id)) return;
-    if (!startedAt.current) startedAt.current = Date.now();
-    setElapsed((Date.now() - startedAt.current) / 1000);
-    setPopped((current) => [...current, bubble.id]);
-    setLastPopped(bubble);
-    onPop();
-  }
-
-  const challengeLevel = elapsed <= 8 ? '高敏识骗员' : elapsed <= 16 ? '稳健核验员' : '风险扫描员';
-
+  const [selected, setSelected] = useState(null);
   return <div className="scam-prelude">
     <div className="prelude-grid" aria-hidden="true" />
     <motion.div className="prelude-copy" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}>
-      <span>反诈侦探任务 · 8 秒识骗挑战</span>
-      <h1>戳破你身边的<br />诈骗气泡</h1>
-      <p>第一次点击即开始计时。戳破 8 个伪装，争取拿到“高敏识骗员”。</p>
+      <span>第一反应测试 · 不公布答案</span>
+      <h1>骗子的消息<br />你先点哪条？</h1>
+      <p>四条消息同时弹出。选一条你最可能先打开的，系统会记住你的第一反应。</p>
     </motion.div>
-    <div className="challenge-hud" aria-live="polite">
-      <span><small>SCAN</small><b>{popped.length}/{bubbles.length}</b></span>
-      <span><small>TIME</small><b>{elapsed.toFixed(1)}s</b></span>
-    </div>
-    <div className="bubble-field">
-      {bubbles.map((bubble, index) => {
-        const isPopped = popped.includes(bubble.id);
-        return <div className={`bubble-slot bubble-slot-${index + 1}`} key={bubble.id}>
-          <AnimatePresence mode="wait">
-            {!isPopped ? <motion.button
-              key="bubble"
-              className={`scam-bubble bubble-${bubble.tone}`}
-              onClick={() => popBubble(bubble)}
-              aria-label={`戳破${bubble.label}骗局`}
-              initial={{ opacity: 0, scale: 0.4 }}
-              animate={{ opacity: 1, scale: [1, 1.035, 1], y: [0, -8 - (index % 3) * 2, 0], rotate: [0, index % 2 ? 1.4 : -1.4, 0] }}
-              exit={{ opacity: 0, scale: 1.55, filter: 'blur(8px)', transition: { duration: 0.24, ease: 'easeOut' } }}
-              transition={{ opacity: { delay: index * 0.07 }, scale: { duration: 2.7 + index * 0.11, repeat: Infinity }, y: { duration: 3.1 + index * 0.13, repeat: Infinity, ease: 'easeInOut' }, rotate: { duration: 3.6, repeat: Infinity } }}
-            >
-              <i>{bubble.icon}</i><b>{bubble.label}</b><span>点击戳破</span>
-            </motion.button> : <motion.div key="burst" className={`bubble-burst burst-${bubble.tone}`} initial={{ opacity: 0, scale: 0.2 }} animate={{ opacity: 1, scale: 1 }}>
-              <span>✓</span><b>已识破</b>
-              {[0, 1, 2, 3, 4, 5].map((piece) => <i key={piece} style={{ '--piece': piece }} />)}
-            </motion.div>}
-          </AnimatePresence>
-        </div>;
-      })}
-    </div>
-    <div className="bubble-insight" aria-live="polite">
-      {lastPopped ? <motion.div key={lastPopped.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}><b>{lastPopped.label}</b><span>{lastPopped.clue}</span></motion.div> : <span>先任选一个气泡</span>}
+    <div className="opening-messages">
+      {bubbles.map((bubble, index) => <motion.button key={bubble.id} className={`opening-message opening-message-${bubble.tone} ${selected?.id === bubble.id ? 'selected' : ''}`} onClick={() => { setSelected(bubble); onPop(); }} initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * .1 }}>
+        <span className="opening-message-meta"><b>{bubble.label}</b><small>刚刚</small></span>
+        <strong>{bubble.message}</strong>
+        <em>{selected?.id === bubble.id ? '已记录第一反应' : '点开看看 →'}</em>
+      </motion.button>)}
     </div>
     <AnimatePresence>
-      {complete && <motion.div className="prelude-complete" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="challenge-result"><span>挑战完成 · {elapsed.toFixed(1)} 秒</span><strong>{challengeLevel}</strong></div>
-        <p>包装不同，目标相同：先获取你的信任，再推动你交出钱、验证码或控制权。</p>
-        <button className="primary" onClick={onNext}>进入《8.8元到账之后》 <span>→</span></button>
+      {selected && <motion.div className="prelude-complete opening-next" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="challenge-result"><span>第一反应已记录</span><strong>答案暂不公布</strong></div>
+        <p>接下来，你会以一名THU学生的视角，走进这条消息的后面。</p>
+        <button className="primary" onClick={() => onNext(selected)}>进入《8.8元到账之后》 <span>→</span></button>
       </motion.div>}
     </AnimatePresence>
   </div>;
@@ -697,9 +667,10 @@ function Share({ actor, onShare, onSingle, onRefuse }) {
 function Ending({ actor, rank, invested, history, onReplay }) {
   const data = ENDINGS[rank];
   const loss = rank === 'S' ? 0 : invested;
+  const endingLabel = rank === 'S' ? '你把手刹拉上了' : rank === 'B' ? '钱包受伤，但你停下了' : '骗子把这一轮做完了';
   return <div className="centered ending-wrap">
-    <span className={`rank-badge rank-${rank}`}>{rank}</span>
-    <p className="ending-kicker">你的本次结局</p>
+    <span className={`rank-badge ending-stamp rank-${rank}`}>{endingLabel}</span>
+    <p className="ending-kicker">剧情先告一段落</p>
     <h2>{data.title}</h2>
     <p className="ending-subtitle">{data.subtitle}</p>
     {rank === 'S' && <Scene actor={actor} pose="stop" />}
@@ -750,6 +721,33 @@ function TransferTest({ index, feedback, onAnswer, onNext }) {
   </div>;
 }
 
+function QuickTest({ index, question, selected, nickname, setNickname, onAnswer, onNext }) {
+  const complete = index === QUICK_QUESTIONS.length - 1 && selected !== null;
+  return <div className="quick-test">
+    <Eyebrow index={`${index + 1}/${QUICK_QUESTIONS.length}`} text="钱包精神状态快问" />
+    <h2>不考你背没背过，<br />只看你第一反应。</h2>
+    <p className="lead">先选最像你的那句。没有标准答案，系统只记录你会怎么做。</p>
+    <div className={`quick-card quick-card-${question.id}`}>
+      <span className="scenario-tag">{question.tag}</span>
+      <div className="quick-message">{question.message}</div>
+      <div className="quick-options">
+        {question.options.map((option, optionIndex) => <button key={option.text} className={`quick-option ${selected === optionIndex ? 'selected' : ''}`} onClick={() => onAnswer(optionIndex)} disabled={selected !== null}>
+          <span>{String.fromCharCode(65 + optionIndex)}</span><b>{option.text}</b>
+        </button>)}
+      </div>
+    </div>
+    {selected !== null && <motion.div className="quick-picked" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+      <span>已记下</span><b>{complete ? '你的钱包外号快要揭晓了。' : '别急，下一条更像你。'}</b>
+    </motion.div>}
+    {complete && <div className="nickname-box">
+      <label htmlFor="nickname">给结果卡写个昵称（可跳过）</label>
+      <input id="nickname" value={nickname} onChange={(event) => setNickname(event.target.value.slice(0, 12))} placeholder="例如：紫操场常驻人口" maxLength={12} />
+      <small>只保存在本机，不上传。</small>
+    </div>}
+    {selected !== null && <button className="primary" onClick={onNext}>{complete ? '查看骗子给我的外号' : '下一条 →'}</button>}
+  </div>;
+}
+
 function Cases({ showEvidence, setShowEvidence, onNext }) {
   const [selectedCase, setSelectedCase] = useState(null);
 
@@ -775,7 +773,7 @@ function Cases({ showEvidence, setShowEvidence, onNext }) {
       <p><b>数据边界：</b>清华来源是校保卫部发布的北京市反诈中心案例，不能据此称受害者为清华学生；重庆大学材料明确写明“学生”；上海交大数字仅反映该校统计，不代表全国高校。</p>
       <button className="case-source-button" onClick={() => setSelectedCase(OFFICIAL_CASES[3])}>在本页查看上海交大数据来源 <b>→</b></button>
     </div>}
-    <button className="primary" onClick={onNext}>生成我的反诈识别力卡片</button>
+    <button className="primary" onClick={onNext}>回到我的骗子外号结果</button>
     <AnimatePresence>
       {selectedCase && <motion.div className="modal-backdrop" role="presentation" onClick={() => setSelectedCase(null)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
         <motion.div className="modal case-source-modal" role="dialog" aria-modal="true" aria-label="官方案例来源" onClick={(event) => event.stopPropagation()} initial={{ y: 30 }} animate={{ y: 0 }} exit={{ y: 30 }}>
@@ -793,24 +791,33 @@ function Cases({ showEvidence, setShowEvidence, onNext }) {
   </div>;
 }
 
-function Result({ cardRef, score, levelName, levelCopy, ending, transferScore, onShare, onDownload, onRestart, cardPreview, onClosePreview }) {
+function Result({ cardRef, profile, ending, transferScore, onShare, onDownload, onRestart, onReplay, onTransfer, onCases, cardPreview, onClosePreview }) {
+  const endingLabel = ending === 'S' ? '付款前停下' : ending === 'B' ? '及时止损' : '连环收割';
   return <div className="centered result-wrap">
-    <Eyebrow index="完成" text="你的反诈识别力" />
+    <Eyebrow index={profile.hidden ? '隐藏' : '完成'} text="骗子给你的外号" />
     <div className="result-card" ref={cardRef}>
-      <span className="result-brand">8.8元到账之后</span>
-      <div className="score-ring"><strong>{score}</strong><span>/ 100</span></div>
-      <h2>{levelName}</h2><p>{levelCopy}</p>
-      <div className="result-tags"><span>剧情结局 {ending}</span><span>迁移测试 {transferScore}/3</span></div>
-      <blockquote>第一笔返款不是证明，<br />可能只是诱饵。</blockquote>
+      <span className="result-brand">8.8元到账之后 · 操盘手通讯录</span>
+      <div className="result-recipient">目标：{profile.nickname}</div>
+      <h2 className="profile-title">{profile.title}</h2>
+      <p className="profile-line">{profile.line}</p>
+      <div className="awake-panel"><span>你在这里醒来</span><b>{profile.wake.label}</b><small>{profile.wake.title}</small></div>
+      <div className="scammer-note"><span>骗子评语</span><p>“{profile.note}”</p></div>
+      <blockquote>{profile.defense}</blockquote>
+      <div className="result-tags"><span>剧情结局 · {endingLabel}</span><span>迁移判断 {transferScore}/3</span><span>{profile.hidden ? '隐藏结果' : '本局画像'}</span></div>
     </div>
-    <div className="action-plan"><b>把这三步带回现实</b><span>不垫资 · 独立核验 · 不共享屏幕</span></div>
-    <button className="primary" onClick={onShare}>分享我的挑战结果</button>
+    <div className="result-disclaimer">这个外号只代表你在本次剧情中的选择，不代表你天生好骗。</div>
+    <button className="primary" onClick={onShare}>分享我的钱包外号</button>
     <button className="secondary" onClick={onDownload}>预览 / 保存结果卡片</button>
+    <div className="result-links">
+      <button className="result-link" onClick={onReplay}>拆开骗子的八步剧本</button>
+      <button className="result-link" onClick={onTransfer}>换三个场景再试</button>
+      <button className="result-link" onClick={onCases}>查看985高校真实案例</button>
+    </div>
     <button className="text-button result-restart" onClick={onRestart}>换一条路径再体验</button>
-    <p className="share-note">分享时建议附上：兼职刷单要求先付款，就是诈骗高风险信号。</p>
+    <p className="share-note">分享时建议附上：第一笔返款不是证明，可能只是诱饵。</p>
     {cardPreview && <Modal title="结果卡片已生成" onClose={onClosePreview}>
       <img className="card-preview-image" src={cardPreview} alt="已生成的反诈识别力结果卡片" />
-      <a className="download-link" href={cardPreview} download="8.8元到账之后-反诈识别力卡片.png">保存 PNG 到本机</a>
+      <a className="download-link" href={cardPreview} download="8.8元到账之后-骗子外号卡片.png">保存 PNG 到本机</a>
       <p className="save-tip">如果手机浏览器没有直接下载，可长按上方图片保存。</p>
     </Modal>}
   </div>;

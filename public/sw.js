@@ -1,4 +1,4 @@
-const CACHE = 'after-8-8-v16-challenge-share-compat';
+const CACHE = 'after-8-8-v17-quick-profile-results';
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
