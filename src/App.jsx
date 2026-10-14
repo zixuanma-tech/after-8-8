@@ -894,6 +894,11 @@ function FilmScene({ actor, beat, captions }) {
   };
   const shot = shotByBeat[beat] || 1;
   const index = shot - 1;
+  useEffect(() => {
+    // 预取下一段短剧，剧情推进时视频可立即开播。
+    const next = actor.motionShots[index + 1];
+    if (next) fetch(next).catch(() => {});
+  }, [actor, index]);
   return <div className={`film-scene film-${beat}`} aria-label={`AI短剧连续动作，第 ${shot} 镜`}>
     <div className="film-bars" aria-hidden="true" />
     <video
@@ -905,7 +910,7 @@ function FilmScene({ actor, beat, captions }) {
       muted
       playsInline
       loop
-      preload="metadata"
+      preload="auto"
       aria-label={`${actor.alt}在宿舍中的连续手部、上半身和表情动作`}
     />
     <div className="film-captions" aria-live="polite">

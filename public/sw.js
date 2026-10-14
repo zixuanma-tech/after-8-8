@@ -1,4 +1,4 @@
-const CACHE = 'after-8-8-v22-compressed-assets';
+const CACHE = 'after-8-8-v23-reencoded-videos';
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
