@@ -880,8 +880,7 @@ function Cases({ showEvidence, setShowEvidence, onNext }) {
           <h3>{selectedCase.title}</h3>
           <p>{selectedCase.summary}</p>
           <div className="source-modal-issuer"><b>发布方</b><span>{selectedCase.issuer}</span></div>
-          <p className="source-mobile-note">手机端建议先阅读本页摘要。只有需要核验原文件时，再打开下面的外部链接；原 H5 会保留在原标签页。</p>
-          <a className="source-external-link" href={selectedCase.url} target="_blank" rel="noopener noreferrer">新标签打开官方原文件 <span>↗</span></a>
+          <p className="source-mobile-note">本页摘要依据上述高校官方发布材料整理，全程留在 H5 内完成阅读。</p>
           <button className="secondary" onClick={() => setSelectedCase(null)}>留在 H5，继续体验</button>
         </motion.div>
       </motion.div>}

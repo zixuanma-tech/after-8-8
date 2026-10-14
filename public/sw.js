@@ -1,4 +1,4 @@
-const CACHE = 'after-8-8-v25-unified-slogan';
+const CACHE = 'after-8-8-v26-cases-stay-in-app';
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
