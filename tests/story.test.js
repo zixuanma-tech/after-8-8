@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateScore, QUICK_QUESTIONS, resolveEnding, resolveProfile, scoreTransfer } from '../src/story.js';
+import { ALL_PROFILE_TYPES, calculateScore, QUICK_QUESTIONS, resolveEnding, resolveProfile, scoreTransfer } from '../src/story.js';
 
 describe('story branches', () => {
   it('reaches S before payment', () => {
@@ -69,5 +69,35 @@ describe('wallet nickname profile', () => {
     });
     expect(profile.title).toBe('诈骗剧情沉浸式内测员');
     expect(profile.wake.label).toBe('未在关键层醒来');
+  });
+
+  it('derives the wake layer from story events even when quiz meta events follow', () => {
+    const profile = resolveProfile({
+      history: ['完成首个免费小任务', '收到8.8元后仍选择退出并核验', '进入钱包精神状态快问', '完成钱包精神状态快问'],
+      ending: 'S',
+      metrics: { bait: 2, pressure: 1, verify: 3, stop: 3, privacy: 0 },
+      quickAnswers: {},
+      gender: 'female',
+    });
+    expect(profile.wake.title).toBe('小额返款');
+    expect(profile.wake.label).toBe('第3层醒来');
+  });
+
+  it('feeds opening bait signals into the profile instead of raw message scoring', () => {
+    const profile = resolveProfile({
+      history: ['开场先点开：“账户异常，开启屏幕共享可快速退款。”'],
+      ending: 'S',
+      metrics: { bait: 0, pressure: 0, verify: 0, stop: 0, privacy: 0 },
+      quickAnswers: {},
+      gender: 'female',
+    });
+    expect(profile.scores.obedience).toBe(2);
+  });
+
+  it('exposes the full gallery of 11 profile types with 3 hidden ones', () => {
+    const all = Object.values(ALL_PROFILE_TYPES);
+    expect(all).toHaveLength(11);
+    expect(all.filter((type) => type.hidden)).toHaveLength(3);
+    expect(all.every((type) => type.id && type.line && type.defense)).toBe(true);
   });
 });

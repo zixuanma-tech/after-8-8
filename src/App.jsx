@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { loadProfileIcon, profileIconSvg, profileImageSrc, PROFILE_ICONS } from './profile-icons.js';
 import {
+  ALL_PROFILE_TYPES,
   ENDINGS,
   INITIAL_METRICS,
   OPENING_BAITS,
@@ -91,6 +93,7 @@ function App() {
   const [cardPreview, setCardPreview] = useState(null);
   const appRef = useRef(null);
   const cardRef = useRef(null);
+  const toneCtxRef = useRef(null);
   const lightMusicRef = useRef(null);
   const darkMusicRef = useRef(null);
   const musicFadeRef = useRef(null);
@@ -112,7 +115,9 @@ function App() {
   function tone(kind = 'tap') {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     if (!soundOn || !AudioContextClass) return;
-    const context = new AudioContextClass();
+    if (!toneCtxRef.current) toneCtxRef.current = new AudioContextClass();
+    const context = toneCtxRef.current;
+    if (context.state === 'suspended') context.resume().catch(() => {});
     const oscillator = context.createOscillator();
     const gain = context.createGain();
     oscillator.type = kind === 'danger' ? 'sawtooth' : 'sine';
@@ -249,15 +254,16 @@ function App() {
     go('result', '完成钱包精神状态快问');
   }
 
-  function buildResultCard() {
+  async function buildResultCard() {
+    const icon = await loadProfileIcon(profile.id);
     const canvas = document.createElement('canvas');
     canvas.width = 1080;
     canvas.height = 1600;
     const ctx = canvas.getContext('2d');
     const gradient = ctx.createLinearGradient(0, 0, 1080, 1600);
-    gradient.addColorStop(0, '#2a103d');
-    gradient.addColorStop(0.56, '#55227c');
-    gradient.addColorStop(1, '#8f62ac');
+    gradient.addColorStop(0, '#3b0543');
+    gradient.addColorStop(0.56, '#660874');
+    gradient.addColorStop(1, '#9a4fae');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 1080, 1600);
     ctx.fillStyle = 'rgba(255,255,255,.08)';
@@ -269,45 +275,46 @@ function App() {
       }
     }
     ctx.fillStyle = '#ffffff';
-    ctx.font = '700 54px system-ui, sans-serif';
+    ctx.font = '700 54px system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
     ctx.fillText('校园反诈互动体验', 90, 140);
-    ctx.font = '900 88px system-ui, sans-serif';
+    ctx.font = '900 88px system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
     ctx.fillText('8.8元到账之后', 90, 265);
     ctx.fillStyle = '#ddc9eb';
-    ctx.font = '500 34px system-ui, sans-serif';
+    ctx.font = '500 34px system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
     ctx.fillText('第一笔返款不是证明，可能只是诱饵。', 90, 335);
-    ctx.fillStyle = '#f3dd65';
-    ctx.font = '900 118px system-ui, sans-serif';
+    if (icon) ctx.drawImage(icon, 465, 355, 150, 150);
+    ctx.fillStyle = '#e7cdf5';
+    ctx.font = '900 118px system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
     ctx.fillText(profile.title, 90, 630);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '800 46px system-ui, sans-serif';
+    ctx.font = '800 46px system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
     wrapCanvasText(ctx, profile.line, 90, 735, 900, 62);
     ctx.fillStyle = '#ddc9eb';
-    ctx.font = '600 31px system-ui, sans-serif';
+    ctx.font = '600 31px system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
     ctx.fillText(`${profile.wake.label} · ${profile.wake.title}`, 90, 885);
     ctx.fillStyle = 'rgba(255,255,255,.12)';
     roundRect(ctx, 70, 1030, 940, 330, 42);
     ctx.fill();
     ctx.fillStyle = '#ffffff';
-    ctx.font = '700 38px system-ui, sans-serif';
+    ctx.font = '700 38px system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
     ctx.fillText('骗子评语', 110, 1105);
-    ctx.font = '500 32px system-ui, sans-serif';
+    ctx.font = '500 32px system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
     wrapCanvasText(ctx, profile.note, 110, 1180, 820, 46);
-    ctx.fillStyle = '#f3dd65';
-    ctx.font = '700 30px system-ui, sans-serif';
+    ctx.fillStyle = '#e7cdf5';
+    ctx.font = '700 30px system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
     wrapCanvasText(ctx, profile.defense, 110, 1300, 820, 46);
     ctx.fillStyle = '#ddc9eb';
-    ctx.font = '500 26px system-ui, sans-serif';
+    ctx.font = '500 26px system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
     ctx.fillText('来源可核验 · 官方案例复盘', 90, 1500);
     return canvas.toDataURL('image/png');
   }
 
-  function downloadCard() {
-    setCardPreview(buildResultCard());
+  async function downloadCard() {
+    setCardPreview(await buildResultCard());
   }
 
   async function shareCard() {
-    const dataUrl = buildResultCard();
+    const dataUrl = await buildResultCard();
     try {
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], '8.8元到账之后-骗子外号卡片.png', { type: 'image/png' });
@@ -361,12 +368,13 @@ function App() {
           {screen === 'share' && <Share actor={actor} onShare={() => finish('C', '开启屏幕共享暴露账户操作', { privacy: 5 })} onSingle={() => finish('C', '尝试只展示支付页，仍暴露敏感操作', { privacy: 4 })} onRefuse={() => finish('B', '拒绝屏幕共享并保留证据', { privacy: 1, stop: 5 })} />}
           {screen === 'ending' && <Ending actor={actor} rank={ending} invested={invested} history={history} onReplay={() => go('quick', '进入钱包精神状态快问')} />}
           {screen === 'quick' && <QuickTest index={quickIndex} question={QUICK_QUESTIONS[quickIndex]} selected={quickChoice} nickname={nickname} setNickname={setNickname} onAnswer={answerQuick} onNext={nextQuick} />}
-          {screen === 'result' && <Result cardRef={cardRef} profile={profile} ending={ending} transferScore={transferScore} onShare={shareCard} onDownload={downloadCard} onRestart={restart} onReplay={() => go('replay')} onTransfer={() => { setQuestionIndex(0); setAnswerFeedback(null); go('transfer'); }} onCases={() => go('cases')} cardPreview={cardPreview} onClosePreview={() => setCardPreview(null)} />}
+          {screen === 'result' && <Result cardRef={cardRef} profile={profile} ending={ending} gender={gender} transferScore={transferScore} onShare={shareCard} onDownload={downloadCard} onRestart={restart} onReplay={() => go('replay')} onTransfer={() => { setQuestionIndex(0); setAnswerFeedback(null); go('transfer'); }} onCases={() => go('cases')} cardPreview={cardPreview} onClosePreview={() => setCardPreview(null)} />}
           {screen === 'replay' && <Replay history={history} onNext={() => go('transfer')} />}
           {screen === 'transfer' && <TransferTest index={questionIndex} feedback={answerFeedback} onAnswer={answerTransfer} onNext={nextTransfer} />}
           {screen === 'cases' && <Cases showEvidence={showEvidence} setShowEvidence={setShowEvidence} onNext={() => go('result')} />}
         </motion.section>
       </AnimatePresence>
+      <div className="rotate-hint" aria-hidden="true"><b>请把手机转回竖屏</b><span>《8.8元到账之后》是为竖屏设计的互动短剧，横屏会错过很多细节。</span></div>
 
     </main>
   );
@@ -557,24 +565,29 @@ function ReferralTrap({ actor, phase, setPhase, onShare, onContinue, onStop }) {
 }
 
 function Group({ actor, phase, setPhase, onCombo, onLeave }) {
+  const chatRef = useRef(null);
+  useEffect(() => {
+    if (phase === 'intro') return;
+    chatRef.current?.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [phase]);
   return <div>
     <Eyebrow index="05" text="高收益任务群 · 99+" />
     <h2>所有人都在晒到账截图</h2>
-    <div className="chat-window">
+    <div className="chat-window" ref={chatRef}>
       <div className="chat-date">14:07</div>
       <Chat name="助教—小夏" text="恭喜新同学完成试单！平台托管组合任务马上满员，399返520。" role="admin" />
       <Chat name="A7学员" text="我刚到账，老师速度太快了！" image="¥520.00 收款成功" />
       <Chat name="认证专员" text="本期项目已完成企业备案，垫资由平台风控账户临时托管。" role="admin" />
       <Chat name="小柠檬" text="求加名额，昨天错过后悔死了😭" />
       <Chat name="助教—小夏" text={`@${actor.name} 只剩最后2个名额，现在跟单吗？`} role="admin" />
-      {phase === 'why' && <Chat name="助教—小夏" text="联合任务要先垫资做数据，企业完成后统一返。群里都是本校同学，放心。" role="admin" />}
-      {phase === 'ordinary' && <Chat name="助教—小夏" text="普通单今天已满。要继续只有399组合单，三分钟后关闭。" role="admin" />}
+      {phase === 'why' && <Chat fresh name="助教—小夏" text="联合任务要先垫资做数据，企业完成后统一返。群里都是本校同学，放心。" role="admin" />}
+      {phase === 'ordinary' && <Chat fresh name="助教—小夏" text="普通单今天已满。要继续只有399组合单，三分钟后关闭。" role="admin" />}
     </div>
     <div className="pressure-meter"><span>从众压力</span><i><b /></i><strong>升高</strong></div>
     <div className="choices">
       <button className="choice hot" onClick={onCombo}><b>抢399元组合任务</b><span>预计返款520元</span></button>
-      <button className="choice" onClick={() => setPhase('why')}><b>先问为什么要垫资</b><span>看看对方如何解释</span></button>
-      <button className="choice" onClick={() => setPhase('ordinary')}><b>只做不花钱的普通单</b><span>对方会不会改变规则？</span></button>
+      <button className={`choice ${phase === 'why' ? 'asked' : ''}`} onClick={() => setPhase('why')} disabled={phase === 'why'}><b>{phase === 'why' ? '已追问 · 看助教怎么回' : '先问为什么要垫资'}</b><span>看看对方如何解释</span></button>
+      <button className={`choice ${phase === 'ordinary' ? 'asked' : ''}`} onClick={() => setPhase('ordinary')} disabled={phase === 'ordinary'}><b>{phase === 'ordinary' ? '已追问 · 看助教怎么回' : '只做不花钱的普通单'}</b><span>对方会不会改变规则？</span></button>
       <button className="choice safe" onClick={onLeave}><b>退出群聊并保留证据</b><span>不在倒计时里做决定</span></button>
     </div>
   </div>;
@@ -742,7 +755,6 @@ function QuickTest({ index, question, selected, nickname, setNickname, onAnswer,
     {complete && <div className="nickname-box">
       <label htmlFor="nickname">给结果卡写个昵称（可跳过）</label>
       <input id="nickname" value={nickname} onChange={(event) => setNickname(event.target.value.slice(0, 12))} placeholder="例如：紫操场常驻人口" maxLength={12} />
-      <small>只保存在本机，不上传。</small>
     </div>}
     {selected !== null && <button className="primary" onClick={onNext}>{complete ? '查看骗子给我的外号' : '下一条 →'}</button>}
   </div>;
@@ -791,13 +803,16 @@ function Cases({ showEvidence, setShowEvidence, onNext }) {
   </div>;
 }
 
-function Result({ cardRef, profile, ending, transferScore, onShare, onDownload, onRestart, onReplay, onTransfer, onCases, cardPreview, onClosePreview }) {
+function Result({ cardRef, profile, ending, gender, transferScore, onShare, onDownload, onRestart, onReplay, onTransfer, onCases, cardPreview, onClosePreview }) {
+  const [showGallery, setShowGallery] = useState(false);
+  const [galleryDetail, setGalleryDetail] = useState(null);
   const endingLabel = ending === 'S' ? '付款前停下' : ending === 'B' ? '及时止损' : '连环收割';
   return <div className="centered result-wrap">
     <Eyebrow index={profile.hidden ? '隐藏' : '完成'} text="骗子给你的外号" />
     <div className="result-card" ref={cardRef}>
       <span className="result-brand">8.8元到账之后 · 操盘手通讯录</span>
       <div className="result-recipient">目标：{profile.nickname}</div>
+      <div className={`profile-icon ${profile.hidden ? 'rare' : ''}`}><ProfileIcon id={profile.id} /></div>
       <h2 className="profile-title">{profile.title}</h2>
       <p className="profile-line">{profile.line}</p>
       <div className="awake-panel"><span>你在这里醒来</span><b>{profile.wake.label}</b><small>{profile.wake.title}</small></div>
@@ -805,10 +820,10 @@ function Result({ cardRef, profile, ending, transferScore, onShare, onDownload, 
       <blockquote>{profile.defense}</blockquote>
       <div className="result-tags"><span>剧情结局 · {endingLabel}</span><span>迁移判断 {transferScore}/3</span><span>{profile.hidden ? '隐藏结果' : '本局画像'}</span></div>
     </div>
-    <div className="result-disclaimer">这个外号只代表你在本次剧情中的选择，不代表你天生好骗。</div>
     <button className="primary" onClick={onShare}>分享我的钱包外号</button>
     <button className="secondary" onClick={onDownload}>预览 / 保存结果卡片</button>
     <div className="result-links">
+      <button className="result-link" onClick={() => setShowGallery(true)}>翻开骗子人才库 · 共11款外号</button>
       <button className="result-link" onClick={onReplay}>拆开骗子的八步剧本</button>
       <button className="result-link" onClick={onTransfer}>换三个场景再试</button>
       <button className="result-link" onClick={onCases}>查看985高校真实案例</button>
@@ -820,7 +835,43 @@ function Result({ cardRef, profile, ending, transferScore, onShare, onDownload, 
       <a className="download-link" href={cardPreview} download="8.8元到账之后-骗子外号卡片.png">保存 PNG 到本机</a>
       <p className="save-tip">如果手机浏览器没有直接下载，可长按上方图片保存。</p>
     </Modal>}
+    {showGallery && <Modal title={galleryDetail ? '档案详情' : '骗子人才库 · 全部外号'} onClose={() => { setShowGallery(false); setGalleryDetail(null); }}>
+      {galleryDetail ? <div className="gallery-detail">
+        <div className="gallery-detail-icon"><ProfileIcon id={galleryDetail.id} /></div>
+        <h4>{galleryDetail.title || (gender === 'male' ? galleryDetail.titleMale : galleryDetail.titleFemale)}</h4>
+        <div className="gallery-tags">
+          {galleryDetail.id === profile.id && <em className="gallery-tag">本局</em>}
+          {galleryDetail.hidden && <em className="gallery-tag rare-tag">隐藏款</em>}
+        </div>
+        <p className="gallery-detail-line">{galleryDetail.line}</p>
+        <p className="gallery-detail-note">{galleryDetail.note}</p>
+        <blockquote>{galleryDetail.defense}</blockquote>
+        <button className="secondary" onClick={() => setGalleryDetail(null)}>← 返回人才库</button>
+      </div> : <>
+        <div className="gallery-grid">
+          {Object.values(ALL_PROFILE_TYPES).map((type) => (
+            <button key={type.id} className={`gallery-item ${type.id === profile.id ? 'current' : ''}`} onClick={() => setGalleryDetail(type)}>
+              <div className="gallery-badge"><ProfileIcon id={type.id} /></div>
+              <b>{type.title || (gender === 'male' ? type.titleMale : type.titleFemale)}</b>
+              <div className="gallery-tags">
+                {type.id === profile.id && <em className="gallery-tag">本局</em>}
+                {type.hidden && <em className="gallery-tag rare-tag">隐藏款</em>}
+              </div>
+              <span>{type.line}</span>
+            </button>
+          ))}
+        </div>
+        <p className="gallery-note">点击任意外号查看档案。8 款常规 + 3 款隐藏，隐藏款的触发条件藏在剧情选择里。</p>
+      </>}
+    </Modal>}
   </div>;
+}
+
+function ProfileIcon({ id }) {
+  const src = profileImageSrc(id);
+  if (!src) return <span dangerouslySetInnerHTML={{ __html: profileIconSvg(id) }} />;
+  const fallback = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(profileIconSvg(id));
+  return <img src={src} alt={PROFILE_ICONS[id]?.label ?? '人格徽章插图'} onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = fallback; }} />;
 }
 
 function Scene({ actor, pose }) {
@@ -876,8 +927,8 @@ function JourneyMap({ progress }) {
   </div>;
 }
 
-function Chat({ name, text, role, image }) {
-  return <div className="chat-row"><div className={`chat-avatar ${role || ''}`}>{name.slice(0, 1)}</div><div><span className="chat-name">{name}</span><div className="bubble">{text}{image && <div className="receipt"><small>交易成功</small><b>{image}</b></div>}</div></div></div>;
+function Chat({ name, text, role, image, fresh }) {
+  return <div className={`chat-row ${fresh ? 'fresh' : ''}`}><div className={`chat-avatar ${role || ''}`}>{name.slice(0, 1)}</div><div><span className="chat-name">{name}</span><div className="bubble">{text}{image && <div className="receipt"><small>交易成功</small><b>{image}</b></div>}</div></div></div>;
 }
 
 function Eyebrow({ index, text }) {
@@ -889,8 +940,14 @@ function Modal({ title, onClose, children }) {
 }
 
 function roundRect(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
   ctx.beginPath();
-  ctx.roundRect(x, y, width, height, radius);
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
 }
 
 function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {

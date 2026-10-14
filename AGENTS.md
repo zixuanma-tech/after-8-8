@@ -25,7 +25,8 @@
 - React 19 + Vite 7；动画使用 Motion。
 - `src/App.jsx`：页面状态、分支选择、人物视频、音频、案例弹层、结果卡生成和分享。
 - `src/story.js`：结局、风险节点、开场消息、6 道快问、人格判定、3 道迁移题和评分规则。
-- `src/styles.css`：移动端 H5、桌面 9:16 舞台、视频画幅、动效和响应式样式。
+- `src/profile-icons.js`：8 个外号 + 3 个隐藏款的内联 SVG 徽章，结果页和 Canvas 分享卡共用同一份图形源。
+- `src/styles.css`：移动端 H5、桌面 9:16 舞台、视频画幅、动效和响应式样式；文件末尾是多平台适配层（桌面暗色舞台与预览提示、悬停反馈、触屏横屏转竖提示、Canvas 中文字体栈），兼容底线为 iOS Safari 14.5+ / Chrome 88+，含微信内置浏览器，`roundRect` 等新 API 已做等价兜底。
 - `tests/story.test.js`：对结局、迁移题计分和关键人格结果的单元测试。
 - `public/assets/characters/`：男女角色基础、闭眼、入场和停止动作图。
 - `public/assets/film/`：男女各 8 张视频 poster。
@@ -35,6 +36,7 @@
 - `docs/official-sources.md`：所有案例、数字和表述边界的依据。
 - `docs/ai-creation-log.md`：图像、视频、补帧和音乐制作记录。
 - `docs/submission-copy.md`：投稿时可使用的作品说明。
+- `docs/8bti-design.md`：已否决的外号扩展方案（8BTI），仅作记录、不要实施；正式人格结果维持 `src/story.js` 现有的 8 个外号 + 3 个隐藏款。
 
 Vite 的 `base` 是 `./`，因此构建产物可放在 GitHub Pages 的项目子路径，也可部署到普通静态站点。
 
@@ -86,7 +88,7 @@ npm run build:standalone
 - 男女角色的镜头编号和剧情节点一一对应。替换视频时保持同名文件，或同时修改 `CHARACTER.motionShots`。
 - JPG 只作为 MP4 加载前的 poster，不能当作所谓“AI 动画”交付。
 - 手机、手部和脸是生成视频最容易失真的位置。替换镜头后至少检查开头、中间、结尾三帧，重点看正反面、手指数、人物一致性和文字形变。
-- 当前正式人格结果以文字卡片呈现。此前试作的 `public/assets/concepts/` 人格图标被否决，留在本机且已被 `.gitignore` 排除；不要把那批草稿重新提交。
+- 当前正式人格结果以 AI 生成插画头像呈现：11 张 560×560 JPEG 位于 `public/assets/profiles/`，`src/profile-icons.js` 负责加载（图片优先、手写 SVG 徽章兜底），结果页、人才库弹层（可点击查看档案详情）和 Canvas 分享卡共用。此前试作的 `public/assets/concepts/` 人格图标被否决，留在本机且已被 `.gitignore` 排除；不要把那批草稿重新提交。
 - `source-assets/` 是本地高质量原稿目录，不进入 Git。需要重新生成视频时先确认本机是否具备对应模型、显存和工具链，不要默认普通开发环境可以复现。
 
 ## 已知限制

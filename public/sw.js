@@ -1,4 +1,4 @@
-const CACHE = 'after-8-8-v17-quick-profile-results';
+const CACHE = 'after-8-8-v21-profile-illustrations';
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -56,6 +56,27 @@ self.addEventListener('install', (event) => {
       './assets/audio/trust-bubbles-dark.mp3',
       ...builtAssets,
     ]);
+    // 人格插图为可选资源：文件尚不存在时跳过，避免 addAll 整体失败。
+    await Promise.all([
+      './assets/profiles/little-fool.jpg',
+      './assets/profiles/snack.jpg',
+      './assets/profiles/rush-king.jpg',
+      './assets/profiles/kind-baby.jpg',
+      './assets/profiles/crowd-baby.jpg',
+      './assets/profiles/stubborn.jpg',
+      './assets/profiles/service-baby.jpg',
+      './assets/profiles/serious-genius.jpg',
+      './assets/profiles/schrodinger.jpg',
+      './assets/profiles/anti-scam-debater.jpg',
+      './assets/profiles/immersive-tester.jpg',
+    ].map(async (file) => {
+      try {
+        const response = await fetch(file, { cache: 'reload' });
+        if (response.ok) await cache.put(file, response);
+      } catch {
+        // 该插画尚未提供，跳过。
+      }
+    }));
     await self.skipWaiting();
   })());
 });

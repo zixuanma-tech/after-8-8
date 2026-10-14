@@ -144,7 +144,7 @@ export const QUICK_QUESTIONS = Object.freeze([
   },
 ]);
 
-const PROFILE_TYPES = Object.freeze({
+export const PROFILE_TYPES = Object.freeze({
   familiar: { id: 'little-fool', title: '熟人小呆瓜', line: '同学说“我做过”，你听成了“这不会骗人”。', note: '熟人可能没有骗你，他也可能只走到了第一笔返款。', defense: '熟人推荐可以听，项目来源还得自己查。' },
   bait: { id: 'snack', titleFemale: '8.8大馋丫头', titleMale: '8.8大馋小子', line: '一笔8.8元，替整个平台完成了实名认证。', note: '到账只能证明对方愿意支付诱饵成本。', defense: '钱到账是真的，不代表赚钱项目是真的。' },
   rush: { id: 'rush-king', title: '急急大王', line: '对方一说只剩三个名额，你比骗子还怕任务过期。', note: '催促是在替你缩短核验时间。', defense: '越催你做决定的人，越怕你有时间做决定。' },
@@ -154,6 +154,14 @@ const PROFILE_TYPES = Object.freeze({
   obedience: { id: 'service-baby', title: '客服乖宝宝', line: '手机还在你手里，操作顺序已经交给了他。', note: '共享屏幕会暴露余额、验证码和支付操作。', defense: '退款不需要共享屏幕，验证码和支付页永不展示。' },
   verify: { id: 'serious-genius', title: '较真小天才', line: '别人研究怎么提现，你研究这个链接到底是谁发的。', note: '骗子提供证据，你负责离开他的聊天框查证据。', defense: '保留核验习惯，也提醒身边同学先查来源。' },
 });
+
+export const HIDDEN_PROFILE_TYPES = Object.freeze({
+  schrodinger: { id: 'schrodinger', hidden: true, title: '薛定谔的钱包', line: '反诈题全会，诈骗剧情一集没落。', note: '知道答案和当下停下来，是两件不同的事。', defense: '把会背的规则提前用在下一次点击上。' },
+  'anti-scam-debater': { id: 'anti-scam-debater', hidden: true, title: '反诈小杠精', line: '群里说得越真，你越想跑到群外查。', note: '你把核验放在了对方证据链之外。', defense: '保持较真，但也把核验方法分享给身边同学。' },
+  'immersive-tester': { id: 'immersive-tester', hidden: true, title: '诈骗剧情沉浸式内测员', line: '好消息，这是H5；现实里的骗子不提供“重新开始”。', note: '这次体验已经走过多个关键止损点。', defense: '停止转账、保存证据、联系银行和学校并报警求助。' },
+});
+
+export const ALL_PROFILE_TYPES = Object.freeze({ ...PROFILE_TYPES, ...HIDDEN_PROFILE_TYPES });
 
 const WAKE_LAYERS = Object.freeze([
   { number: 1, title: '熟人背书', match: ['熟人背书', '同学背书'] },
@@ -171,7 +179,7 @@ function addSignals(target, signals = {}) {
 }
 
 function layerFromHistory(history = [], ending) {
-  const last = [...history].reverse().find((item) => !item.includes('迁移测试')) || '';
+  const last = [...history].reverse().find((item) => !item.includes('迁移测试') && !item.includes('快问')) || '';
   const found = WAKE_LAYERS.find((layer) => layer.match.some((phrase) => last.includes(phrase)));
   if (ending === 'C') return { label: '未在关键层醒来', title: found?.title || '操盘完成', number: null };
   const layer = found || (ending === 'B' ? WAKE_LAYERS[6] : WAKE_LAYERS[0]);
@@ -181,6 +189,11 @@ function layerFromHistory(history = [], ending) {
 export function resolveProfile({ history = [], ending, invested = 0, metrics = INITIAL_METRICS, quickAnswers = {}, gender = 'female', nickname = '' }) {
   const scores = { familiar: 0, bait: 0, rush: 0, referral: 0, crowd: 0, sunk: 0, obedience: 0, verify: 0 };
   history.forEach((event) => {
+    if (event.startsWith('开场先点开')) {
+      const bait = OPENING_BAITS.find((item) => event.includes(item.message));
+      if (bait) addSignals(scores, bait.signals);
+      return;
+    }
     if (event.includes('熟人背书') || event.includes('同学背书')) scores.familiar += 2;
     if (event.includes('点击校园AI') || event.includes('首个免费小任务')) scores.bait += 2;
     if (event.includes('8.8元到账后继续') || event.includes('可信证明')) scores.bait += 3;
@@ -216,13 +229,13 @@ export function resolveProfile({ history = [], ending, invested = 0, metrics = I
   let type;
   let hidden = false;
   if ((ending === 'B' || ending === 'C' || invested > 0) && safeQuick >= 4 && meta === 'confidence') {
-    type = { id: 'schrodinger', title: '薛定谔的钱包', line: '反诈题全会，诈骗剧情一集没落。', note: '知道答案和当下停下来，是两件不同的事。', defense: '把会背的规则提前用在下一次点击上。' };
+    type = HIDDEN_PROFILE_TYPES.schrodinger;
     hidden = true;
   } else if (ending === 'S' && scores.verify >= 8 && safeQuick >= 4 && meta === 'reflect') {
-    type = { id: 'anti-scam-debater', title: '反诈小杠精', line: '群里说得越真，你越想跑到群外查。', note: '你把核验放在了对方证据链之外。', defense: '保持较真，但也把核验方法分享给身边同学。' };
+    type = HIDDEN_PROFILE_TYPES['anti-scam-debater'];
     hidden = true;
   } else if (ending === 'C' && (invested >= 1397 || scores.obedience >= 6)) {
-    type = { id: 'immersive-tester', title: '诈骗剧情沉浸式内测员', line: '好消息，这是H5；现实里的骗子不提供“重新开始”。', note: '这次体验已经走过多个关键止损点。', defense: '停止转账、保存证据、联系银行和学校并报警求助。' };
+    type = HIDDEN_PROFILE_TYPES['immersive-tester'];
     hidden = true;
   } else {
     const order = ['obedience', 'sunk', 'referral', 'familiar', 'bait', 'crowd', 'rush', 'verify'];
