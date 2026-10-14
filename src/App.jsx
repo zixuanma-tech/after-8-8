@@ -880,7 +880,6 @@ function Cases({ showEvidence, setShowEvidence, onNext }) {
           <h3>{selectedCase.title}</h3>
           <p>{selectedCase.summary}</p>
           <div className="source-modal-issuer"><b>发布方</b><span>{selectedCase.issuer}</span></div>
-          <p className="source-mobile-note">本页摘要依据上述高校官方发布材料整理，全程留在 H5 内完成阅读。</p>
           <button className="secondary" onClick={() => setSelectedCase(null)}>留在 H5，继续体验</button>
         </motion.div>
       </motion.div>}

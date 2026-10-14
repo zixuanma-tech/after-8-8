@@ -1,4 +1,4 @@
-const CACHE = 'after-8-8-v26-cases-stay-in-app';
+const CACHE = 'after-8-8-v27-case-note-removed';
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
