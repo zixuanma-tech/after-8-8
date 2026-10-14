@@ -96,7 +96,7 @@ npm run build:standalone
 - 现有自动化测试只覆盖 `src/story.js` 的纯逻辑，没有浏览器端 E2E 测试。修改页面交互后必须手动走完至少一条 S、B、C 路径。
 - Service Worker 使用显式资源清单。新增正式媒体时，如果希望首开后离线可用，必须把文件加入 `public/sw.js` 并提升缓存版本。
 - 外部高校案例链接依赖来源网站可访问性。H5 会先在站内显示摘要，再由用户主动打开原文件；不要恢复为一点击就离开页面。
-- 当前正式线上地址仍是 `https://after-8-8.zixuan-ma-stats.chatgpt.site/`。GitHub 仓库只负责版本管理；是否启用 GitHub Pages、绑定域名或替换正式地址，需要单独配置和验证。
+- 正式线上地址仍是 `https://after-8-8.zixuan-ma-stats.chatgpt.site/`。GitHub Pages 已启用：推送到 main 会经 `.github/workflows/deploy.yml` 自动构建部署到 `https://zixuanma-tech.github.io/after-8-8/`，部署前置会先跑单元测试。
 
 ## 接手顺序
 
