@@ -10,3 +10,6 @@ __pycache__/
 # 本地试作与已否决的人格形象草稿，不属于当前 H5 正式素材。
 public/assets/concepts/
 scripts/build_cream_mascots.py
+
+# Word 临时锁文件
+~$*
