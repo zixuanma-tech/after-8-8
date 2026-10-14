@@ -1,4 +1,4 @@
-const CACHE = 'after-8-8-v23-reencoded-videos';
+const CACHE = 'after-8-8-v24-boot-loader';
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {

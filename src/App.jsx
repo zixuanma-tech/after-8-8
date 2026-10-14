@@ -60,6 +60,31 @@ const OFFICIAL_CASES = [
 const DARK_MUSIC_SCREENS = new Set(['group', 'deposit', 'wallet', 'frozen', 'share', 'ending', 'result']);
 const FLOW = ['prologue', 'cover', 'select', 'classmate', 'feed', 'task', 'reward', 'proof', 'referral', 'group', 'deposit', 'wallet', 'frozen', 'share', 'ending', 'quick', 'result', 'replay', 'transfer', 'cases'];
 
+// 开场预载清单：封面 + 角色立绘 + 前两镜视频（约 2MB），
+// 其余视频由 FilmScene 的“预取下一段”接力。
+const BOOT_ASSETS = [
+  './assets/hero-v2.jpg',
+  './assets/characters/female.webp',
+  './assets/characters/female-blink.webp',
+  './assets/characters/female-portal.webp',
+  './assets/characters/female-stop.webp',
+  './assets/characters/male.webp',
+  './assets/characters/male-blink.webp',
+  './assets/characters/male-portal.webp',
+  './assets/characters/male-stop.webp',
+  './assets/video/female-shot-01.mp4',
+  './assets/video/female-shot-02.mp4',
+  './assets/video/male-shot-01.mp4',
+  './assets/video/male-shot-02.mp4',
+];
+
+function bootLine(progress) {
+  if (progress < 30) return '骗子正在布置现场…';
+  if (progress < 60) return '8.8 元正在入账…';
+  if (progress < 90) return '周然正在编辑消息…';
+  return '好戏开场。';
+}
+
 function readSession() {
   try {
     return JSON.parse(sessionStorage.getItem('after-8-8-session') || 'null');
@@ -97,6 +122,10 @@ function App() {
   const lightMusicRef = useRef(null);
   const darkMusicRef = useRef(null);
   const musicFadeRef = useRef(null);
+  const bootRanRef = useRef(false);
+  const [boot, setBoot] = useState(() => restoredSession?.screen && restoredSession.screen !== 'prologue'
+    ? { progress: 100, done: true }
+    : { progress: 0, done: false });
 
   const actor = CHARACTER[gender];
   const transferScore = useMemo(() => scoreTransfer(answers), [answers]);
@@ -111,6 +140,51 @@ function App() {
       // Local-file and privacy modes may disable storage; the H5 still works without restoration.
     }
   }, [screen, gender, ending, invested, metrics, history, answers, questionIndex, quickAnswers, quickIndex, nickname]);
+
+  // 开场预载：真实字节进度，单项失败跳过，完成 0.6s 后自动淡出。
+  // 恢复到剧情中的会话不再显示；资源已缓存时进度会瞬间走完。
+  useEffect(() => {
+    if (bootRanRef.current) return;
+    bootRanRef.current = true;
+    if (screen !== 'prologue') {
+      setBoot({ progress: 100, done: true });
+      return;
+    }
+    let loadedBytes = 0;
+    let totalBytes = 0;
+    let doneCount = 0;
+    const update = () => {
+      const bytePct = totalBytes ? loadedBytes / totalBytes : 0;
+      const countPct = doneCount / BOOT_ASSETS.length;
+      const pct = Math.min(99, Math.round(Math.max(bytePct, countPct) * 100));
+      setBoot((current) => ({ progress: Math.max(current.progress, pct), done: false }));
+    };
+    Promise.all(BOOT_ASSETS.map(async (url) => {
+      try {
+        const response = await fetch(url);
+        const length = Number(response.headers.get('content-length')) || 0;
+        if (length) totalBytes += length;
+        if (response.body) {
+          const reader = response.body.getReader();
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            loadedBytes += value ? value.length : 0;
+            update();
+          }
+        }
+      } catch {
+        // 单项资源失败不阻塞开场。
+      }
+      doneCount += 1;
+      update();
+    })).then(async () => {
+      setBoot({ progress: 100, done: false });
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      setBoot({ progress: 100, done: true });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function tone(kind = 'tap') {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -339,6 +413,18 @@ function App() {
       <audio ref={darkMusicRef} src="./assets/audio/trust-bubbles-dark.mp3" loop preload="auto" aria-hidden="true" />
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
+      <AnimatePresence>
+        {!boot.done && (
+          <motion.div className="boot-screen" exit={{ opacity: 0 }} transition={{ duration: 0.6 }}>
+            <span className="boot-kicker">校园反诈互动短剧</span>
+            <h1>演出即将开始</h1>
+            <p className="boot-line">{bootLine(boot.progress)}</p>
+            <div className="boot-bar"><i style={{ width: `${boot.progress}%` }} /></div>
+            <span className="boot-percent">{boot.progress}%</span>
+            <small>首次加载约 2MB · 之后可离线回看</small>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {!['prologue', 'cover'].includes(screen) && (
         <header className="topbar">
           <div className="brand-chip"><span className="thu-mark">THU</span><span>反诈体验</span></div>
