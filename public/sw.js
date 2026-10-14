@@ -1,4 +1,4 @@
-const CACHE = 'after-8-8-v24-boot-loader';
+const CACHE = 'after-8-8-v25-unified-slogan';
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {

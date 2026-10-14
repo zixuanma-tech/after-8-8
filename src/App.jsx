@@ -355,7 +355,7 @@ function App() {
     ctx.fillText('8.8元到账之后', 90, 265);
     ctx.fillStyle = '#ddc9eb';
     ctx.font = '500 34px system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
-    ctx.fillText('第一笔返款不是证明，可能只是诱饵。', 90, 335);
+    ctx.fillText('第一笔返款先给甜头，连环收割随后登场。', 90, 335);
     if (icon) ctx.drawImage(icon, 465, 355, 150, 150);
     ctx.fillStyle = '#e7cdf5';
     ctx.font = '900 118px system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
@@ -394,7 +394,7 @@ function App() {
       const file = new File([blob], '8.8元到账之后-骗子外号卡片.png', { type: 'image/png' });
       const shareData = {
         title: '《8.8元到账之后》',
-        text: `${profile.shareLine} 第一笔返款不是证明，可能只是诱饵。`,
+        text: `${profile.shareLine} 第一笔返款先给甜头，连环收割随后登场。`,
         files: [file],
       };
       if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
@@ -499,7 +499,7 @@ function Cover({ onStart }) {
     <div className="cover-copy">
       <div className="cover-kicker">AI 互动反诈短剧 · 由你决定结局</div>
       <h1>8.8元<br />到账之后</h1>
-      <p className="slogan">第一笔返款不是证明，<br />可能只是诱饵。</p>
+      <p className="slogan">第一笔返款先给甜头，<br />连环收割随后登场。</p>
       <button className="primary giant" onClick={onStart}>穿过诱饵 <span>→</span></button>
     </div>
   </div>;
@@ -915,7 +915,7 @@ function Result({ cardRef, profile, ending, gender, transferScore, onShare, onDo
       <button className="result-link" onClick={onCases}>查看985高校真实案例</button>
     </div>
     <button className="text-button result-restart" onClick={onRestart}>换一条路径再体验</button>
-    <p className="share-note">分享时建议附上：第一笔返款不是证明，可能只是诱饵。</p>
+    <p className="share-note">分享时建议附上：第一笔返款先给甜头，连环收割随后登场。</p>
     {cardPreview && <Modal title="结果卡片已生成" onClose={onClosePreview}>
       <img className="card-preview-image" src={cardPreview} alt="已生成的反诈识别力结果卡片" />
       <a className="download-link" href={cardPreview} download="8.8元到账之后-骗子外号卡片.png">保存 PNG 到本机</a>
