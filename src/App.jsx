@@ -15,12 +15,12 @@ import {
 
 const CHARACTER = {
   female: {
-    name: '小清', pronoun: '她', image: './assets/characters/female.png', blink: './assets/characters/female-blink.png', portal: './assets/characters/female-portal.png', stop: './assets/characters/female-stop.png', alt: '扎高马尾、身穿紫白THU棒球服的女大学生',
+    name: '小清', pronoun: '她', image: './assets/characters/female.webp', blink: './assets/characters/female-blink.webp', portal: './assets/characters/female-portal.webp', stop: './assets/characters/female-stop.webp', alt: '扎高马尾、身穿紫白THU棒球服的女大学生',
     shots: ['./assets/film/female-shot-01.jpg', './assets/film/female-shot-02.jpg', './assets/film/female-shot-03.jpg', './assets/film/female-shot-04.jpg', './assets/film/female-shot-05.jpg', './assets/film/female-shot-06.jpg', './assets/film/female-shot-07.jpg', './assets/film/female-shot-08.jpg'],
     motionShots: ['./assets/video/female-shot-01.mp4', './assets/video/female-shot-02.mp4', './assets/video/female-shot-03.mp4', './assets/video/female-shot-04.mp4', './assets/video/female-shot-05.mp4', './assets/video/female-shot-06.mp4', './assets/video/female-shot-07.mp4', './assets/video/female-shot-08.mp4'],
   },
   male: {
-    name: '小华', pronoun: '他', image: './assets/characters/male.png', blink: './assets/characters/male-blink.png', portal: './assets/characters/male-portal.png', stop: './assets/characters/male-stop.png', alt: '高个、蓬松短发、身穿紫白THU棒球服的男大学生',
+    name: '小华', pronoun: '他', image: './assets/characters/male.webp', blink: './assets/characters/male-blink.webp', portal: './assets/characters/male-portal.webp', stop: './assets/characters/male-stop.webp', alt: '高个、蓬松短发、身穿紫白THU棒球服的男大学生',
     shots: ['./assets/film/male-shot-01.jpg', './assets/film/male-shot-02.jpg', './assets/film/male-shot-03.jpg', './assets/film/male-shot-04.jpg', './assets/film/male-shot-05.jpg', './assets/film/male-shot-06.jpg', './assets/film/male-shot-07.jpg', './assets/film/male-shot-08.jpg'],
     motionShots: ['./assets/video/male-shot-01.mp4', './assets/video/male-shot-02.mp4', './assets/video/male-shot-03.mp4', './assets/video/male-shot-04.mp4', './assets/video/male-shot-05.mp4', './assets/video/male-shot-06.mp4', './assets/video/male-shot-07.mp4', './assets/video/male-shot-08.mp4'],
   },
@@ -408,7 +408,7 @@ function ScamPrelude({ bubbles, onPop, onNext }) {
 
 function Cover({ onStart }) {
   return <div className="cover-wrap cover-v2">
-    <img className="hero-poster" src="./assets/hero-v2.png" alt="戴微笑面具的幕后操盘者在虚拟网络中布置返利、转账与屏幕共享陷阱" />
+    <img className="hero-poster" src="./assets/hero-v2.jpg" alt="戴微笑面具的幕后操盘者在虚拟网络中布置返利、转账与屏幕共享陷阱" />
     <div className="cover-scan" aria-hidden="true" />
     <div className="cover-copy">
       <div className="cover-kicker">AI 互动反诈短剧 · 由你决定结局</div>
