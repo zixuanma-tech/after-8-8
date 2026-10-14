@@ -1,4 +1,4 @@
-const CACHE = 'after-8-8-v27-case-note-removed';
+const CACHE = 'after-8-8-v28-network-first';
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -78,15 +78,23 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith((async () => {
-    const cached = await caches.match(event.request);
-    if (cached) return cached;
-    if (event.request.mode === 'navigate') {
-      const shell = await caches.match('./index.html');
-      if (shell) return shell;
+    // 网络优先：在线时始终返回最新版本；请求失败（离线）时回退缓存。
+    try {
+      const response = await fetch(event.request);
+      if (response && response.status === 200 && new URL(event.request.url).origin === self.location.origin) {
+        const copy = response.clone();
+        const cache = await caches.open(CACHE);
+        cache.put(event.request, copy);
+      }
+      return response;
+    } catch {
+      const cached = await caches.match(event.request);
+      if (cached) return cached;
+      if (event.request.mode === 'navigate') {
+        const shell = await caches.match('./index.html');
+        if (shell) return shell;
+      }
+      return new Response('当前离线，且该资源尚未缓存。', { status: 504, statusText: 'Offline' });
     }
-    const response = await fetch(event.request);
-    const copy = response.clone();
-    caches.open(CACHE).then((cache) => cache.put(event.request, copy));
-    return response;
   })());
 });

@@ -32,7 +32,7 @@
 - `public/assets/film/`：男女各 8 张视频 poster。
 - `public/assets/video/`：男女各 8 段 1280×720 H.264 MP4；网页实际播放的是这些视频。
 - `public/assets/audio/`：《信任泡沫》明暗双轨原创配乐。
-- `public/sw.js`：生产环境离线缓存。修改核心静态资源或缓存清单后，要同步更新 `CACHE` 版本字符串。
+- `public/sw.js`：生产环境离线缓存，获取策略为网络优先、缓存兜底（在线时始终拿最新版，离线时回退本地缓存）。修改核心静态资源或缓存清单后，仍要同步更新 `CACHE` 版本字符串。
 - `docs/official-sources.md`：所有案例、数字和表述边界的依据。
 - `docs/ai-creation-log.md`：图像、视频、补帧和音乐制作记录。
 - `docs/submission-copy.md`：投稿时可使用的作品说明。
